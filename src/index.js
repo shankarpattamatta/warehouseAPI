@@ -2,6 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const itemRouter = require('./routers/itemRouter.js');
 const userRouter = require('./routers/userRouter.js');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 require('./db/mongoose.js');
 const app = express();

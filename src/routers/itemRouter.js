@@ -54,11 +54,18 @@ router.get('/items/:id',async function(req,res){
             });
             if(!result)
             {
-                return res.status(500).send(err);
+                return res.status(500).send('Bad Item Input to update!');
             }
             else
             {
-            const updatedItem= await  Item.findByIdAndUpdate(req.params.id,req.params.body,{runValidators:true,new:true});
+            //Instead of directly updating the item,lets use another approach to let middlware do its job.
+            //const updatedItem= await  Item.findByIdAndUpdate(req.params.id,req.body,{runValidators:true,new:true});
+            const item = Item.findById(req.params.id);
+            updateKeys.forEach(function(updateKey)
+            {
+                Item[updateKey]=req.body[updateKey];
+            })
+            await item.save
             res.status(200).send(updatedItem);
             }         
         }

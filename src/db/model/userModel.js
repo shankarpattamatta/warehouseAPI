@@ -2,11 +2,16 @@
 //Also this file will declare the static methods that can be called on the schema as well as the instance methods that are independent to all the instances.
 const mongoose = require('mongoose');
 const validator = require('validator');
+const bcrypt = require('bcryptjs');
 require('../../db/mongoose.js');
-//create a model which inturn creates the schema object 
-//Each schema maps to a mongodb collection 
+const jwt = require('jsonwebtoken');
 
-const userSchema = mongoose.Schema({
+//create a model which inturn creates the schema object - we pay with the model and use query methods on the model.
+//Each schema provides the structure of a  mongodb collection , A collection corresponds to a table in relational database
+//Keep in mind that , that the collection is created only if it doesnt exist.
+//Also using a schema helps us to access middleware functions.
+
+const userSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true
@@ -28,7 +33,7 @@ const userSchema = mongoose.Schema({
         required: true,
         trim: true,
         lowercase:true,
-        minlength: 7,
+       // minlength: 7,
         validate(value) {
             if (value.includes('password')) {
                 throw Error('Password shoud not include the given text');
@@ -51,24 +56,51 @@ const userSchema = mongoose.Schema({
         {
             token:{
                 type: String,
-                
+                required:true
             }
         }
     ]
 });
+//bcrypt the password before saving the user
+userSchema.pre('save', async function(next){
+    //here this refers to the document to be saved.
+    const user = this;
+    console.log('This middleware call runs before every request!!-calling bcrypt');
+    if(user.isModified('password')){
+      user.password= await bcrypt.hash(user.password,8);
+    }
+    next();
+} );
+//Static method are accessible on Model
 
+userSchema.statics.findByUserCredentials = async function(useremail,userpassword){
+   
+    const user = await userModel.findOne({email:useremail});
+   
+    if(!user){
+        throw new Error('No such user!')
+    }
+    //bcrypt not working
+    //const isMatch = await bcrypt.compare(userpassword,user.password);
+    if(userpassword===user.password)
+    {
+        return user;
+    }
+    else{
+        throw new Error('Unable to Login!!');
+    }
+}
+//Access the middleware function to bcrypt the password before saving 
 
-//create a model and export this model as a const 
+//Generate AUth Token for every User Instance ;Instance Methods are accessible via objects of model
+userSchema.methods.generateAuthToken = async function()
+{
+    const user = this;
+    const token = jwt.sign({_id:user._id.toString()},'Generate a new token');
+    user.tokens=user.tokens.concat({token});
+    await user.save();
+    return token;
+} 
+
 const userModel = mongoose.model('users',userSchema);
-// const me = new userModel({
-//     name:'umashankar',
-//     age:'27',
-//     password:'Cricket@123',
-//     email:'shankar.pattamatta@gmail.com'
-    
-// });
-// me.save(function (err) {
-//     if (err) return handleError(err);
-//     // saved!
-//   });
 module.exports=userModel;
